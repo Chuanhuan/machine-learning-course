@@ -1,0 +1,33 @@
+\begin{thebibliography}{1}
+
+\bibitem{donders2006review}
+A~Rogier~T Donders, Geert~JMG van~der Heijden, Theo Stijnen, and Karel~GM
+  Moons.
+\newblock Review: a gentle introduction to imputation of missing values.
+\newblock {\em Journal of clinical epidemiology}, 59(10):1087--1091, 2006.
+
+\bibitem{wang1999progressive}
+Zhou Wang and David Zhang.
+\newblock Progressive switching median filter for the removal of impulse noise
+  from highly corrupted images.
+\newblock {\em IEEE Transactions on Circuits and Systems II: Analog and Digital
+  Signal Processing}, 46(1):78--80, 1999.
+
+\bibitem{de2000mahalanobis}
+Roy De~Maesschalck, Delphine Jouan-Rimbaud, and D{\'e}sir{\'e}~L Massart.
+\newblock The mahalanobis distance.
+\newblock {\em Chemometrics and intelligent laboratory systems}, 50(1):1--18,
+  2000.
+
+\bibitem{beyer1999nearest}
+Kevin Beyer, Jonathan Goldstein, Raghu Ramakrishnan, and Uri Shaft.
+\newblock When is “nearest neighbor” meaningful?
+\newblock In {\em International conference on database theory}, pages 217--235.
+  Springer, 1999.
+
+\bibitem{jolliffe2002principal}
+Ian Jolliffe.
+\newblock {\em Principal component analysis}.
+\newblock Wiley Online Library, 2002.
+
+\end{thebibliography}

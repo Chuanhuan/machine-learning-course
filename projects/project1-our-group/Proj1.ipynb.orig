@@ -1,0 +1,1311 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Project 1 of the PCML course !"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Useful starting lines"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import datetime\n",
+    "%load_ext autoreload\n",
+    "%autoreload 2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## importing data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "import helpers\n",
+    "\n",
+    "ids, x_tr, y_tr = helpers.load_data('data/train.csv')\n",
+    "ids_s, x_s, y_s = helpers.load_data('data/train.csv', True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### our best results so far\n",
+    "```\n",
+    "| Outliers  | Inv Data |   PCA    | Loss MAE | Loss MSE | Kaggle Score |\n",
+    "|-----------|----------|----------|----------|----------|--------------|\n",
+    "|           |          |          |1937107.13|    NaN   |              |\n",
+    "| X (K=1.5) |          |          |1918842.43|    NaN   |              |\n",
+    "|           |     X    |          |   NaN    |    NaN   |              |\n",
+    "|           |          | X (k=20) |94003.9734| 0.3559693|   0.36030    |\n",
+    "```"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "filter_outliers = False\n",
+    "filter_invalid_data = False\n",
+    "filter_median = False\n",
+    "filter_PCA = False"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Outliers"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "--- outliers filter disabled---\n",
+      "(250000, 30)\n"
+     ]
+    }
+   ],
+   "source": [
+    "from outliers import *\n",
+    "if (filter_outliers):\n",
+    "    (x_filtered, y_filtered, out_id) = MD_removeOutliers(x_tr, y_tr, threshold_scale = 1.5)\n",
+    "else:\n",
+    "    print(\"--- outliers filter disabled---\")\n",
+    "    x_filtered = x_tr\n",
+    "    y_filtered = y_tr\n",
+    "    out_id = []\n",
+    "print(x_filtered.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "collapsed": false
+   },
+   "source": [
+    "## Remove invalid data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "--- remove invalid data filter disabled---\n",
+      "(250000, 30)\n"
+     ]
+    }
+   ],
+   "source": [
+    "from clean_missing_data import *\n",
+    "if (filter_invalid_data):\n",
+    "    x_cl = remove_missing_columns(x_filtered)\n",
+    "    x_cl, y_cl = remove_missing_rows(x_cl, y_filtered)\n",
+    "    \n",
+    "else:\n",
+    "    print(\"--- remove invalid data filter disabled---\")\n",
+    "    x_cl, y_cl  = x_filtered, y_filtered\n",
+    "\n",
+    "#print(x_cl[0])\n",
+    "print(x_cl.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Median Filtering\n",
+    "\n",
+    "The main idea of the median filter is to run through the signal entry by entry, replacing each entry with the median of neighboring entries. Good to remove noise."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(250000, 30)\n"
+     ]
+    }
+   ],
+   "source": [
+    "import scipy.signal as sps\n",
+    "if (filter_median):\n",
+    "    x_cl = sps.medfilt(x_cl)\n",
+    "    print(np.shape(x_cl))\n",
+    "else:\n",
+    "    print(\"--- median filtering disabled ---\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## PCA"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "30 elements in mean-dimensional vector:\n",
+      "[ -4.90230794e+01   4.92398193e+01   8.11819816e+01   5.78959617e+01\n",
+      "  -7.08420675e+02  -6.01237051e+02  -7.09356603e+02   2.37309984e+00\n",
+      "   1.89173324e+01   1.58432217e+02   1.43760943e+00  -1.28304708e-01\n",
+      "  -7.08985189e+02   3.87074191e+01  -1.09730480e-02  -8.17107200e-03\n",
+      "   4.66602072e+01  -1.95074680e-02   4.35429640e-02   4.17172345e+01\n",
+      "  -1.01191920e-02   2.09797178e+02   9.79176000e-01  -3.48329567e+02\n",
+      "  -3.99254314e+02  -3.99259788e+02  -6.92381204e+02  -7.09121609e+02\n",
+      "  -7.09118631e+02   7.30645914e+01]\n",
+      "(30, 30) size of covariance matrix\n",
+      "30 eigen values:\n",
+      "[  1.98361790e+06   4.70787394e+05   1.52814225e+05   3.51276806e+04\n",
+      "   1.81844503e+04   2.23538472e+03   1.83311263e+03   1.26660194e+03\n",
+      "   9.44046982e+02   5.19385510e+02   3.74827197e+02   3.84395271e+02\n",
+      "   1.78779816e+02   1.38811517e+02   4.57897240e+01   3.98920386e+00\n",
+      "   3.49795311e+00   2.74456931e+00   2.45149215e+00   1.65338307e+00\n",
+      "   1.40891360e+00   9.95640451e-01   7.46670055e-01   6.78989019e-01\n",
+      "   6.15736691e-01   1.86642451e-01   1.14883591e-01   5.79135567e-02\n",
+      "   2.45941236e-02   7.48658189e-08]\n",
+      "30 eigen vectors\n",
+      "List of most signigicant dimensions, and their eigenvalues:\n",
+      "0 1983617.89941\n",
+      "1 470787.393677\n",
+      "2 152814.225202\n",
+      "3 35127.6806003\n",
+      "4 18184.4502853\n",
+      "5 2235.38471909\n",
+      "6 1833.112629\n",
+      "7 1266.60193618\n",
+      "8 944.046981534\n",
+      "9 519.385509782\n",
+      "11 384.395271243\n",
+      "10 374.82719694\n",
+      "12 178.779815548\n",
+      "13 138.811517485\n",
+      "14 45.7897240007\n",
+      "15 3.98920386443\n",
+      "16 3.49795310907\n",
+      "17 2.74456931231\n",
+      "18 2.45149215328\n",
+      "19 1.65338307281\n",
+      "20 1.40891360352\n",
+      "21 0.995640450749\n",
+      "22 0.74667005477\n",
+      "23 0.678989018863\n",
+      "24 0.615736691447\n",
+      "25 0.186642451124\n",
+      "26 0.114883590552\n",
+      "27 0.0579135566735\n",
+      "28 0.0245941235831\n",
+      "29 7.48658189317e-08\n",
+      "(30, 30) shape of filtered eigen vectors matrix\n",
+      "removed dimensions:  []\n",
+      "(250000, 30) shape of transformed final data with K most-meaningful dimensions\n",
+      "(250000, 30)\n",
+      "(250000, 30)\n",
+      "Explained variance: [  1.98360996e+06   4.70785511e+05   1.52813614e+05   3.51275401e+04\n",
+      "   1.81843775e+04   2.23537578e+03   1.83310530e+03   1.26659687e+03\n",
+      "   9.44043205e+02   5.19383432e+02   3.84393734e+02   3.74825698e+02\n",
+      "   1.78779100e+02   1.38810962e+02   4.57895408e+01   3.98918791e+00\n",
+      "   3.49793912e+00   2.74455833e+00   2.45148235e+00   1.65337646e+00\n",
+      "   1.40890797e+00   9.95636468e-01   7.46667068e-01   6.78986303e-01\n",
+      "   6.15734229e-01   1.86641705e-01   1.14883131e-01   5.79133246e-02\n",
+      "   2.45940252e-02   7.48676523e-08]\n",
+      "Explained variance ratio: [  7.43353476e-01   1.76425836e-01   5.72665660e-02   1.31639685e-02\n",
+      "   6.81455553e-03   8.37702161e-04   6.86952182e-04   4.74654394e-04\n",
+      "   3.53778117e-04   1.94637800e-04   1.44050707e-04   1.40465107e-04\n",
+      "   6.69970750e-05   5.20191031e-05   1.71595298e-05   1.49493940e-06\n",
+      "   1.31084500e-06   1.02851720e-06   9.18687623e-07   6.19599195e-07\n",
+      "   5.27985165e-07   3.73112579e-07   2.79811843e-07   2.54448625e-07\n",
+      "   2.30745049e-07   6.99435687e-08   4.30522009e-08   2.17028911e-08\n",
+      "   9.21655690e-09   2.80564882e-14]\n",
+      "Sum(Explained variance ration) 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "from PCA import PCA_2\n",
+    "if (filter_PCA):\n",
+    "    (x_pca, cols_rem) = PCA_2(x_cl, K=30)\n",
+    "else:\n",
+    "    print(\"--- PCA disabled---\")\n",
+    "    x_pca=x_cl\n",
+    "    cols_rem = []\n",
+    "print(x_pca.shape)\n",
+    "\n",
+    "from sklearn.decomposition import PCA\n",
+    "pca = PCA(n_components=30)\n",
+    "x_cl2 = pca.fit_transform(x_cl, y_cl)\n",
+    "print(x_cl2.shape)\n",
+    "print(\"Explained variance:\", pca.explained_variance_)\n",
+    "print(\"Explained variance ratio:\", pca.explained_variance_ratio_)\n",
+    "print(\"Sum(Explained variance ration)\", sum(pca.explained_variance_ratio_))\n",
+    "#print(x_cl[0])\n",
+    "#print(x_pca[0])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Machine Learning !"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Gradient descent"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Algorithm parameters and initialization"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Import Algorithm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from gradient_descent import gradient_descent\n",
+    "from stochastic_gradient_descent import compute_stoch_gradient, stochastic_gradient_descent"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "parameters"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "max_iters = 1000\n",
+    "gamma_mse = 1.7\n",
+    "gamma_mae = 760"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Initialization"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(250000, 30)\n"
+     ]
+    }
+   ],
+   "source": [
+    "x_stdize, mean_x, std_x = helpers.standardize(x_pca)\n",
+    "y, tx = helpers.build_model_data(x_stdize, y_cl)\n",
+    "print(x_stdize.shape)\n",
+    "#x_s, mean_x_s, std_x_s = helpers.standardize(x_s)\n",
+    "#y_s, tx_s = helpers.build_model_data(x_s, preds_s)\n",
+    "\n",
+    "w_initial = np.zeros(tx.shape[1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(250000,)\n",
+      "(250000, 31)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(y.shape)\n",
+    "print(tx.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Gradient descent algorithm"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Applying gradient descent"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "gradient_losses_mse, gradient_ws_mse = gradient_descent(y, tx, w_initial,\n",
+    "                                                max_iters, gamma_mse)\n",
+    "print(gradient_losses_mse[-1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "gradient_losses_mae, gradient_ws_mae = gradient_descent(y, tx, w_initial,\n",
+    "                                                max_iters, gamma_mae,\n",
+    "                                               mse=False)\n",
+    "print(gradient_losses_mae[-1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "cols_rem"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def outputFile(weights, name='out.csv'):\n",
+    "    DATA_TEST_PATH = 'data/test.csv'\n",
+    "    ids_test, tX_test, _ = helpers.load_data(DATA_TEST_PATH)\n",
+    "    \n",
+    "    tX_test = np.delete(tX_test, cols_rem, 1)\n",
+    "    \n",
+    "    ids_test, tX_test = helpers.build_model_data(tX_test, ids_test)\n",
+    "    \n",
+    "    OUTPUT_PATH = 'submissions/' + name\n",
+    "    y_pred = helpers.predict_labels(weights, tX_test)\n",
+    "    helpers.create_csv_submission(ids_test, y_pred, OUTPUT_PATH)\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "outputFile(gradient_ws_mse[-1], 'mse.csv')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "outputFile(gradient_ws_mae[-1], 'mae.csv')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Stochastic gradient descent algorithm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "sto_gradient_losses_mse, sto_gradient_ws_mse = stochastic_gradient_descent(y, tx, w_initial,\n",
+    "                                                25, max_iters, gamma_mse)\n",
+    "print(sto_gradient_losses_mse[-1])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Least squares"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from least_squares import least_squares"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "least_squares_loss, least_squares_w = least_squares(y, tx)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "least_squares_w"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "least_squares_loss"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Ridge regressions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from ridge_regression import ridge_regression"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "lamb = 5"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "ridge_reg_loss, ridge_reg_w = ridge_regression(y, tx, lamb)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "ridge_reg_loss"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "ridge_reg_w"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Logistic regression (very wierd results to be looked at)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from logistic_reg import logistic_regression_gradient_descent"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "173286.79514\n",
+      "172483.757717\n",
+      "171685.20036\n",
+      "170891.066557\n",
+      "170101.300497\n",
+      "169315.847065\n",
+      "168534.651843\n",
+      "167757.6611\n",
+      "166984.821794\n",
+      "166216.081565\n",
+      "165451.388728\n",
+      "164690.692274\n",
+      "163933.941861\n",
+      "163181.08781\n",
+      "162432.081101\n",
+      "161686.873367\n",
+      "160945.416889\n",
+      "160207.664588\n",
+      "159473.570025\n",
+      "158743.087389\n",
+      "158016.171495\n",
+      "157292.777776\n",
+      "156572.862281\n",
+      "155856.381663\n",
+      "155143.293176\n",
+      "154433.554671\n",
+      "153727.124585\n",
+      "153023.961938\n",
+      "152324.026327\n",
+      "151627.277916\n",
+      "150933.677435\n",
+      "150243.186167\n",
+      "149555.765948\n",
+      "148871.379157\n",
+      "148189.988709\n",
+      "147511.558052\n",
+      "146836.051156\n",
+      "146163.432511\n",
+      "145493.667117\n",
+      "144826.72048\n",
+      "144162.558603\n",
+      "143501.147983\n",
+      "142842.455603\n",
+      "142186.448923\n",
+      "141533.095878\n",
+      "140882.364871\n",
+      "140234.224764\n",
+      "139588.644874\n",
+      "138945.594965\n",
+      "138305.045246\n",
+      "137666.966359\n",
+      "137031.329379\n",
+      "136398.105803\n",
+      "135767.267547\n",
+      "135138.786939\n",
+      "134512.636714\n",
+      "133888.790006\n",
+      "133267.220347\n",
+      "132647.901654\n",
+      "132030.808231\n",
+      "131415.914759\n",
+      "130803.196292\n",
+      "130192.62825\n",
+      "129584.186416\n",
+      "128977.846928\n",
+      "128373.586276\n",
+      "127771.381296\n",
+      "127171.209165\n",
+      "126573.047394\n",
+      "125976.873828\n",
+      "125382.666633\n",
+      "124790.4043\n",
+      "124200.065634\n",
+      "123611.629751\n",
+      "123025.076074\n",
+      "122440.384327\n",
+      "121857.534533\n",
+      "121276.507006\n",
+      "120697.282347\n",
+      "120119.841444\n",
+      "119544.165462\n",
+      "118970.235842\n",
+      "118398.034294\n",
+      "117827.542798\n",
+      "117258.743593\n",
+      "116691.619178\n",
+      "116126.152307\n",
+      "115562.325984\n",
+      "115000.123458\n",
+      "114439.528224\n",
+      "113880.524014\n",
+      "113323.094793\n",
+      "112767.224763\n",
+      "112212.898348\n",
+      "111660.100201\n",
+      "111108.815193\n",
+      "110559.028413\n",
+      "110010.725166\n",
+      "109463.890964\n",
+      "108918.511529\n",
+      "108374.572786\n",
+      "107832.060861\n",
+      "107290.962079\n",
+      "106751.262957\n",
+      "106212.950205\n",
+      "105676.010721\n",
+      "105140.43159\n",
+      "104606.200077\n",
+      "104073.303629\n",
+      "103541.72987\n",
+      "103011.466595\n",
+      "102482.501774\n",
+      "101954.823543\n",
+      "101428.420207\n",
+      "100903.280231\n",
+      "100379.392243\n",
+      "99856.7450278\n",
+      "99335.3275278\n",
+      "98815.1288374\n",
+      "98296.1382022\n",
+      "97778.3450165\n",
+      "97261.7388207\n",
+      "96746.309299\n",
+      "96232.0462773\n",
+      "95718.9397211\n",
+      "95206.9797328\n",
+      "94696.1565501\n",
+      "94186.4605436\n",
+      "93677.8822146\n",
+      "93170.4121933\n",
+      "92664.0412367\n",
+      "92158.7602267\n",
+      "91654.5601677\n",
+      "91151.4321854\n",
+      "90649.3675242\n",
+      "90148.3575458\n",
+      "89648.3937273\n",
+      "89149.4676591\n",
+      "88651.5710436\n",
+      "88154.695693\n",
+      "87658.833528\n",
+      "87163.9765757\n",
+      "86670.1169681\n",
+      "86177.2469409\n",
+      "85685.358831\n",
+      "85194.4450758\n",
+      "84704.4982111\n",
+      "84215.5108697\n",
+      "83727.4757801\n",
+      "83240.3857646\n",
+      "82754.2337385\n",
+      "82269.0127079\n",
+      "81784.7157687\n",
+      "81301.3361054\n",
+      "80818.8669893\n",
+      "80337.3017776\n",
+      "79856.6339115\n",
+      "79376.8569155\n",
+      "78897.964396\n",
+      "78419.9500396\n",
+      "77942.8076124\n",
+      "77466.5309585\n",
+      "76991.113999\n",
+      "76516.5507306\n",
+      "76042.8352246\n",
+      "75569.9616255\n",
+      "75097.9241505\n",
+      "74626.7170877\n",
+      "74156.3347953\n",
+      "73686.7717007\n",
+      "73218.0222992\n",
+      "72750.0811531\n",
+      "72282.9428906\n",
+      "71816.602205\n",
+      "71351.0538534\n",
+      "70886.2926561\n",
+      "70422.3134952\n",
+      "69959.1113141\n",
+      "69496.6811164\n",
+      "69035.017965\n",
+      "68574.1169812\n",
+      "68113.9733438\n",
+      "67654.5822883\n",
+      "67195.939106\n",
+      "66738.0391433\n",
+      "66280.8778007\n",
+      "65824.450532\n",
+      "65368.7528437\n",
+      "64913.7802941\n",
+      "64459.5284924\n",
+      "64005.9930981\n",
+      "63553.1698203\n",
+      "63101.0544169\n",
+      "62649.6426938\n",
+      "62198.9305043\n",
+      "61748.9137484\n",
+      "61299.5883719\n",
+      "60850.9503663\n",
+      "60402.9957673\n",
+      "59955.7206548\n",
+      "59509.1211522\n",
+      "59063.1934252\n",
+      "58617.9336821\n",
+      "58173.3381722\n",
+      "57729.403186\n",
+      "57286.1250541\n",
+      "56843.500147\n",
+      "56401.524874\n",
+      "55960.1956833\n",
+      "55519.509061\n",
+      "55079.4615304\n",
+      "54640.0496521\n",
+      "54201.2700228\n",
+      "53763.1192753\n",
+      "53325.5940774\n",
+      "52888.6911322\n",
+      "52452.4071767\n",
+      "52016.738982\n",
+      "51581.6833526\n",
+      "51147.2371257\n",
+      "50713.3971713\n",
+      "50280.1603909\n",
+      "49847.5237178\n",
+      "49415.4841164\n",
+      "48984.0385816\n",
+      "48553.1841386\n",
+      "48122.9178423\n",
+      "47693.2367771\n",
+      "47264.1380562\n",
+      "46835.6188214\n",
+      "46407.6762426\n",
+      "45980.3075176\n",
+      "45553.5098715\n",
+      "45127.2805563\n",
+      "44701.6168508\n",
+      "44276.5160597\n",
+      "43851.975514\n",
+      "43427.99257\n",
+      "43004.5646091\n",
+      "42581.6890378\n",
+      "42159.3632869\n",
+      "41737.5848112\n",
+      "41316.3510898\n",
+      "40895.6596247\n",
+      "40475.5079416\n",
+      "40055.8935887\n",
+      "39636.814137\n",
+      "39218.2671795\n",
+      "38800.2503314\n",
+      "38382.7612293\n",
+      "37965.7975315\n",
+      "37549.3569169\n",
+      "37133.4370856\n",
+      "36718.0357581\n",
+      "36303.1506749\n",
+      "35888.7795968\n",
+      "35474.9203041\n",
+      "35061.5705966\n",
+      "34648.7282933\n",
+      "34236.3912321\n",
+      "33824.5572695\n",
+      "33413.2242806\n",
+      "33002.3901585\n",
+      "32592.0528144\n",
+      "32182.2101771\n",
+      "31772.860193\n",
+      "31364.0008257\n",
+      "30955.6300558\n",
+      "30547.7458807\n",
+      "30140.3463145\n",
+      "29733.4293875\n",
+      "29326.9931463\n",
+      "28921.0356535\n",
+      "28515.5549873\n",
+      "28110.5492416\n",
+      "27706.0165256\n",
+      "27301.9549635\n",
+      "26898.3626947\n",
+      "26495.2378733\n",
+      "26092.5786679\n",
+      "25690.3832616\n",
+      "25288.6498517\n",
+      "24887.3766495\n",
+      "24486.5618803\n",
+      "24086.2037828\n",
+      "23686.3006096\n",
+      "23286.8506264\n",
+      "22887.8521121\n",
+      "22489.3033588\n",
+      "22091.2026712\n",
+      "21693.5483669\n",
+      "21296.338776\n",
+      "20899.572241\n",
+      "20503.2471167\n",
+      "20107.3617697\n",
+      "19711.914579\n",
+      "19316.9039351\n",
+      "18922.3282402\n",
+      "18528.1859081\n",
+      "18134.4753638\n",
+      "17741.1950439\n",
+      "17348.3433956\n",
+      "16955.9188776\n",
+      "16563.919959\n",
+      "16172.3451199\n",
+      "15781.1928509\n",
+      "15390.461653\n",
+      "15000.1500377\n",
+      "14610.2565266\n",
+      "14220.7796513\n",
+      "13831.7179536\n",
+      "13443.0699851\n",
+      "13054.834307\n",
+      "12667.0094903\n",
+      "12279.5941154\n",
+      "11892.5867724\n",
+      "11505.9860603\n",
+      "11119.7905875\n",
+      "10733.9989716\n",
+      "10348.6098391\n",
+      "9963.6218252\n",
+      "9579.03357422\n",
+      "9194.84373898\n",
+      "8811.05098092\n",
+      "8427.65397\n",
+      "8044.65138457\n",
+      "7662.04191127\n",
+      "7279.824245\n",
+      "6897.99708874\n",
+      "6516.55915353\n",
+      "6135.50915835\n",
+      "5754.84583005\n",
+      "5374.56790324\n",
+      "4994.67412024\n",
+      "4615.16323095\n",
+      "4236.03399281\n",
+      "3857.2851707\n",
+      "3478.91553687\n",
+      "3100.92387083\n",
+      "2723.30895933\n",
+      "2346.06959623\n",
+      "1969.20458243\n",
+      "1592.71272585\n",
+      "1216.59284128\n",
+      "840.843750357\n",
+      "465.464281479\n",
+      "90.4532697354\n",
+      "-284.190443162\n",
+      "-658.468008947\n",
+      "-1032.38057287\n",
+      "-1405.92927376\n",
+      "-1779.11524409\n",
+      "-2151.93961004\n",
+      "-2524.40349159\n",
+      "-2896.50800252\n",
+      "-3268.25425055\n",
+      "-3639.64333732\n",
+      "-4010.67635853\n",
+      "-4381.35440393\n",
+      "-4751.67855744\n",
+      "-5121.64989716\n",
+      "-5491.26949544\n",
+      "-5860.53841897\n",
+      "-6229.45772878\n",
+      "-6598.02848032\n",
+      "-6966.25172356\n",
+      "-7334.12850294\n",
+      "-7701.65985754\n",
+      "-8068.84682103\n",
+      "-8435.6904218\n",
+      "-8802.19168296\n",
+      "-9168.35162241\n",
+      "-9534.17125288\n",
+      "-9899.65158201\n",
+      "-10264.7936124\n",
+      "-10629.5983414\n",
+      "-10994.0667618\n",
+      "-11358.1998612\n",
+      "-11721.9986222\n",
+      "-12085.4640229\n",
+      "-12448.5970364\n",
+      "-12811.3986309\n",
+      "-13173.8697704\n",
+      "-13536.0114136\n",
+      "-13897.8245151\n",
+      "-14259.3100246\n",
+      "-14620.4688875\n",
+      "-14981.3020444\n",
+      "-15341.8104318\n",
+      "-15701.9949816\n",
+      "-16061.8566212\n",
+      "-16421.3962738\n",
+      "-16780.6148584\n",
+      "-17139.5132896\n",
+      "-17498.0924777\n",
+      "-17856.3533289\n",
+      "-18214.2967453\n",
+      "-18571.9236248\n",
+      "-18929.2348613\n",
+      "-19286.2313445\n",
+      "-19642.9139601\n",
+      "-19999.2835901\n",
+      "-20355.3411121\n",
+      "-20711.0874001\n",
+      "-21066.5233242\n",
+      "-21421.6497506\n",
+      "-21776.4675415\n",
+      "-22130.9775555\n",
+      "-22485.1806476\n",
+      "-22839.0776686\n",
+      "-23192.6694661\n",
+      "-23545.9568837\n",
+      "-23898.9407616\n",
+      "-24251.6219361\n",
+      "-24604.0012402\n",
+      "-24956.0795032\n",
+      "-25307.8575508\n",
+      "-25659.3362055\n",
+      "-26010.516286\n",
+      "-26361.3986078\n",
+      "-26711.9839828\n",
+      "-27062.2732196\n",
+      "-27412.2671234\n",
+      "-27761.9664961\n",
+      "-28111.3721362\n",
+      "-28460.4848392\n",
+      "-28809.3053969\n",
+      "-29157.8345982\n",
+      "-29506.0732285\n",
+      "-29854.0220704\n",
+      "-30201.681903\n",
+      "-30549.0535023\n",
+      "-30896.1376413\n",
+      "-31242.9350898\n",
+      "-31589.4466146\n",
+      "-31935.6729794\n",
+      "-32281.6149449\n",
+      "-32627.2732688\n",
+      "-32972.6487056\n",
+      "-33317.7420072\n",
+      "-33662.5539223\n",
+      "-34007.0851967\n",
+      "-34351.3365734\n",
+      "-34695.3087924\n",
+      "-35039.002591\n",
+      "-35382.4187033\n",
+      "-35725.557861\n",
+      "-36068.4207928\n",
+      "-36411.0082245\n",
+      "-36753.3208794\n",
+      "-37095.3594778\n",
+      "-37437.1247373\n",
+      "-37778.6173731\n",
+      "-38119.8380972\n",
+      "-38460.7876193\n",
+      "-38801.4666464\n",
+      "-39141.8758826\n",
+      "-39482.0160297\n",
+      "-39821.8877868\n",
+      "-40161.4918502\n",
+      "-40500.8289138\n",
+      "-40839.8996691\n",
+      "-41178.7048047\n",
+      "-41517.245007\n",
+      "-41855.5209596\n",
+      "-42193.533344\n",
+      "-42531.2828388\n",
+      "-42868.7701203\n",
+      "-43205.9958625\n",
+      "-43542.9607368\n",
+      "-43879.6654123\n",
+      "-44216.1105554\n",
+      "-44552.2968306\n",
+      "-44888.2248997\n",
+      "-45223.8954222\n",
+      "-45559.3090552\n",
+      "-45894.4664536\n",
+      "-46229.3682699\n",
+      "-46564.0151544\n",
+      "-46898.407755\n",
+      "-47232.5467173\n",
+      "-47566.4326848\n",
+      "-47900.0662986\n",
+      "-48233.4481976\n",
+      "-48566.5790185\n",
+      "-48899.4593959\n",
+      "-49232.0899619\n",
+      "-49564.4713468\n",
+      "-49896.6041784\n",
+      "-50228.4890825\n",
+      "-50560.1266829\n",
+      "-50891.5176009\n",
+      "-51222.6624559\n",
+      "-51553.5618653\n",
+      "-51884.2164441\n",
+      "-52214.6268056\n",
+      "-52544.7935606\n",
+      "-52874.7173181\n",
+      "-53204.398685\n",
+      "-53533.8382662\n",
+      "-53863.0366645\n",
+      "-54191.9944806\n",
+      "-54520.7123135\n",
+      "-54849.1907598\n",
+      "-55177.4304143\n",
+      "-55505.43187\n",
+      "-55833.1957176\n",
+      "-56160.7225461\n",
+      "-56488.0129424\n",
+      "-56815.0674916\n",
+      "-57141.8867768\n",
+      "-57468.4713791\n",
+      "-57794.8218778\n",
+      "-58120.9388504\n",
+      "-58446.8228723\n",
+      "-58772.4745171\n",
+      "-59097.8943567\n",
+      "-59423.0829608\n",
+      "-59748.0408977\n",
+      "-60072.7687334\n",
+      "-60397.2670324\n",
+      "-60721.5363572\n",
+      "-61045.5772686\n",
+      "-61369.3903256\n",
+      "-61692.9760853\n",
+      "-62016.3351031\n",
+      "-62339.4679326\n",
+      "-62662.3751257\n",
+      "-62985.0572323\n",
+      "-63307.5148009\n",
+      "-63629.748378\n",
+      "-63951.7585086\n",
+      "-64273.5457356\n",
+      "-64595.1106006\n",
+      "-64916.4536432\n",
+      "-65237.5754015\n",
+      "-65558.4764117\n",
+      "-65879.1572085\n",
+      "-66199.6183249\n",
+      "-66519.8602921\n",
+      "-66839.8836398\n",
+      "-67159.688896\n",
+      "-67479.2765869\n",
+      "-67798.6472373\n",
+      "-68117.8013702\n",
+      "-68436.7395071\n",
+      "-68755.4621678\n",
+      "-69073.9698705\n",
+      "-69392.2631319\n",
+      "-69710.3424669\n",
+      "-70028.208389\n",
+      "-70345.86141\n",
+      "-70663.3020403\n",
+      "-70980.5307886\n",
+      "-71297.548162\n",
+      "-71614.3546662\n"
+     ]
+    },
+    {
+     "ename": "KeyboardInterrupt",
+     "evalue": "",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m                         Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-25-ec5c6fdb8468>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mlogistic_reg_losses\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlogistic_reg_w\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlogistic_regression_gradient_descent\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0my\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m/Users/bmagalha/Workspace/MLproj1/logistic_reg.py\u001b[0m in \u001b[0;36mlogistic_regression_gradient_descent\u001b[0;34m(y, tx, gamma, max_iter)\u001b[0m\n\u001b[1;32m     36\u001b[0m     \u001b[0;32mfor\u001b[0m \u001b[0miter\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mrange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmax_iter\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     37\u001b[0m         \u001b[0;31m# get loss and update w.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 38\u001b[0;31m         \u001b[0mloss\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mw\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlearning_by_gradient_descent\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0my\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mgamma\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     39\u001b[0m         \u001b[0;31m# converge criteria\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     40\u001b[0m         \u001b[0mlosses\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mloss\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/Users/bmagalha/Workspace/MLproj1/logistic_reg.py\u001b[0m in \u001b[0;36mlearning_by_gradient_descent\u001b[0;34m(y, tx, w, gamma)\u001b[0m\n\u001b[1;32m     20\u001b[0m     \u001b[0mReturn\u001b[0m \u001b[0mthe\u001b[0m \u001b[0mloss\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0mthe\u001b[0m \u001b[0mupdated\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     21\u001b[0m     \"\"\"\n\u001b[0;32m---> 22\u001b[0;31m     \u001b[0mloss\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mcalculate_loss\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0my\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     23\u001b[0m     \u001b[0mgradient\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mcalculate_gradient\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0my\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     24\u001b[0m     \u001b[0mw\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mw\u001b[0m \u001b[0;34m-\u001b[0m \u001b[0mgamma\u001b[0m \u001b[0;34m*\u001b[0m \u001b[0mgradient\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/Users/bmagalha/Workspace/MLproj1/logistic_reg.py\u001b[0m in \u001b[0;36mcalculate_loss\u001b[0;34m(y, tx, w)\u001b[0m\n\u001b[1;32m      8\u001b[0m     \u001b[0;34m\"\"\"compute the cost by negative log likelihood.\"\"\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      9\u001b[0m     \u001b[0mxw\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtx\u001b[0m \u001b[0;34m@\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 10\u001b[0;31m     \u001b[0;32mreturn\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msum\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlog\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mexp\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mxw\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m-\u001b[0m \u001b[0my\u001b[0m \u001b[0;34m*\u001b[0m \u001b[0mxw\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     11\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     12\u001b[0m \u001b[0;32mdef\u001b[0m \u001b[0mcalculate_gradient\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0my\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mw\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m: "
+     ]
+    }
+   ],
+   "source": [
+    "logistic_reg_losses, logistic_reg_w = logistic_regression_gradient_descent(y, tx)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "logistic_reg_losses[-1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "logistic_reg_w"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "eig = []\n",
+    "matrix = eig[:K]\n",
+    "others = eig[:K]"
+   ]
+  }
+ ],
+ "metadata": {
+  "anaconda-cloud": {},
+  "kernelspec": {
+   "display_name": "Python [Root]",
+   "language": "python",
+   "name": "Python [Root]"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}

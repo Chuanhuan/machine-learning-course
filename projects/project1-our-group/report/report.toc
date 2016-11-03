@@ -1,0 +1,14 @@
+\select@language {english}
+\contentsline {section}{\numberline {1}Pre-processing}{1}{section.1}
+\contentsline {paragraph}{1. Removal of large unknown features}{1}{paragraph*.1}
+\contentsline {paragraph}{2. Mean Imputation}{1}{paragraph*.2}
+\contentsline {paragraph}{3. Outliers from median filter}{1}{paragraph*.3}
+\contentsline {paragraph}{4. Mahalanobis Distance}{1}{paragraph*.4}
+\contentsline {paragraph}{5. Principal Component Analysis}{1}{paragraph*.5}
+\contentsline {paragraph}{6. Data Standardization}{2}{paragraph*.7}
+\contentsline {section}{\numberline {2}Machine Learning Methods}{2}{section.2}
+\contentsline {section}{\numberline {3}Results}{2}{section.3}
+\contentsline {paragraph}{Execution Results}{2}{paragraph*.9}
+\contentsline {paragraph}{Discussion and Summary}{2}{paragraph*.10}
+\contentsline {section}{References}{3}{paragraph*.10}
+\contentsfinish 
