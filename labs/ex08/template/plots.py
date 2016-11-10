@@ -13,7 +13,9 @@ def plot_cluster(data, mu, colors, ax):
     Note that the dimension of the column vector `colors`
     should be the same as the number of clusters.
     """
-    # check if the dimension matches.
+    # check if the dimension matches
+    print("COLORS",np.shape(colors))
+    print("MU",np.shape(mu))
     assert(len(colors) >= mu.shape[0])
     # build distance matrix.
     distance_matrix = build_distance_matrix(data, mu)
