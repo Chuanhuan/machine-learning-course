@@ -45,8 +45,8 @@
 
 \PaperTitle{The Higgs boson machine learning challenge} % Article title
 
-\Authors{Bruno Magalhaes\textsuperscript{1}, Marie Drieghe\textsuperscript{2}, Nicolas Casademont \textsuperscript{3}} % Authors
-\affiliation{\textbf{Email (SCIPER):} \hspace{0.2cm} \textsuperscript{1} bruno.magalhaes@epfl.ch (212079) \hspace{0.2cm} \textsuperscript{2} marie.drieghe@epfl.ch (273688) \hspace{0.2cm} \textsuperscript{3} nicolas.casademont@epfl.ch (223485)}
+\Authors{Bruno Magalhaes\textsuperscript{1}, Riccardo Silini{2}} % Authors
+\affiliation{\textbf{Email (SCIPER):} \hspace{0.2cm} \textsuperscript{1} bruno.magalhaes@epfl.ch (212079) \hspace{0.2cm} \textsuperscript{2} riccardo.silini@epfl.ch (214398) \hspace{0.2cm}}
 
 \Keywords{}
 %Keyword1 --- Keyword2 --- Keyword3
@@ -63,7 +63,7 @@
 %---------- ABSTRACT
 
 \Abstract{ \small
-Decay signatures of proton-proton collisions led to the discovery of the Higgs Boson. This new particle was discovered by analysing areas with a significant amount of unknown events (signals) against others that contain known ones (background). To tackle the challenge, we present a Machine Learning (ML) algorithm for the classification of these areas. Our algorithm reaches more than 80\% accuracy by combing feature engineering and logistic regression. Due to the high-dimensionality of the solution, we perform iterative stepping via the stochastic gradient descent method. We detail a set of pre-processing methods that allow for shorter data set, smaller dimensionality, faster execution time, filtering of outliers, and imputation of missing values.
+bla bla bla
 }
 
 \begin{document}
@@ -72,9 +72,10 @@ Decay signatures of proton-proton collisions led to the discovery of the Higgs B
 \flushbottom % Makes all text pages the same height
 \maketitle % Print the title and abstract box
 %\tableofcontents % Print the contents section
-\thispagestyle{empty} % Removes page numbering from the first page
+%\thispagestyle{empty} % Removes page numbering from the first page
 
-We present the sequence of pre-processing filtering steps tested in Section \ref{sec-pre-proc}, where we explain their rationale and detail the results. The data after filtering is then used in the Machine Learning methods described in Section \ref{sec-ML} to create a classification model. Results and final remarks are detailed in Section \ref{sec-results}.
+\section{Introduction}
+
 
 \section{Data Augmentation}
 \label{sec-pre-proc}
@@ -93,16 +94,51 @@ We present the sequence of pre-processing filtering steps tested in Section \ref
 
 \paragraph{Two-step classification} 
 
-To reduce noise and allows classification at a finer scale, we added a second neural network to the processing. The initial one will be trained with pairs of [images,groundtruth] and outputs the segmented classification. The second network is trained with pairs [classification,groundtruth] and received the first network's classification as input, outputting the final classification. The second step of this operation is presented as \texttt{Phase 2} in the source code. A sample example is displayed below.
+To reduce noise and allows classification at a finer scale, we added a second neural network to the processing. The initial one will be trained with pairs of [images,groundtruth] and outputs the segmented classification. The second network is trained with pairs [classification,groundtruth] and received the first network's classification as input, outputting the final classification. The second step of this operation is presented as \texttt{Phase 2} in the source code. An example of an application of the two-step classification is displayed in the following picture.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.35\textwidth]{figures/two_phases_conv2d.pdf}
+\includegraphics[width=0.3\textwidth]{figures/two_phases_conv2d.pdf}
 \caption{\small An example of the application of the two-phase propagation process: for a given input (top-left), the predicted segmentation at output of the neural network (bottom-left) is then re-input to a second neural network trained from groundtruth images (top-right), outputting the final classification (bottom-right).}
 \end{figure}
 
+\paragraph{Analysis of neighborhood information} This functionality can be activated wit the flag \texttt{NEIGHBORHOOD\_ANALYSIS} set to \texttt{True} and definining the \texttt{NEIGHBOR\_PIXELS} to the margin of neighborhood pixels to be added and analysed from each patch.
 
-A sample of a possible network architecture (for default parameters) is displayed in figure \ref{fig-conv-2d-architecture}.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.47\textwidth]{figures/NEIGHBORHOOD_ANALYSIS.pdf}
+\caption{\small Example of the neighborhood analysis feature. Standard classification (left) inputs patches of images and classifies the same area. With neighborhood analysis (right), we input the patch of size \texttt{IMG\_PATCH\_SIZE} and all surrounding \texttt{NEIGHBOR\_PIXELS} pixels (orange), with the learning based on the labels of the patch only (red).}
+\end{figure}
+
+\paragraph{Randomized input sequence}
+
+The order in which we present the observations (input vectors) comprising the training set to the network affects the final computation of weights. We implemented a randomized arrangement of the observations according to the response variable that has been shows to be present a better tuned network when compared with ordered arrangements (the standard implementation). Our input is then a randomized set of classification with balanced number of inputs for each label. This feature is enabled by defining \texttt{RANDOMIZE\_INPUT\_PATCHES = True}.
+
+\paragraph{Dropout}
+
+Dropout is a regularization technique for reducing the overfitting of neural networks. It performs model averaging of neural networks efficiently and prevents complex co-adaptations on training data (Srivastava et at. 2014 \cite{srivastava2014dropout}). We enabled dropout in our models by specifying the percentage of dropout on the variable \texttt{DROPOUT\_RATE} as exemplified in the next figure:
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.44\textwidth]{figures/DROPOUT_RATE.pdf}
+\caption{\small Example of the dropout feature. Standard weights tunning (left) methods apply an update of all weights. Dropout-based networks (right) discards the updates of certain weights with the rationale of reducing overfitting. In the example, a dropout rate of \texttt{0.5} disables half of the nodes on the network.}
+\end{figure}
+
+\paragraph{Multi-Layer convolutional network}
+
+We allow the sub-network of convolution layers to increase or decrease, according to the user-defined parameters \texttt{CONV\_LAYERS}. This allowed us to play with the quality of model fitting for different set set of parameters. In practice, our network is an array of convolution and pooling layers, where the output of one layer is the input of the following one. The parameters of every layer is fully customisable by the user from the following variables:
+\begin{itemize}
+\item \texttt{CONV\_LAYERS}: number of convolutional layers, and size of the following parameter arrays;
+\item \texttt{CONV\_FILTER\_SIZES = [5,5,5,5]} : For each layer, the count of horizontal and vertical pixels of filter;
+\item \texttt{CONV\_FILTER\_DEPTHS = [32, 64, 128, 256]}: depth of the weights for the aforementioned layers;
+\item \texttt{POOL\_FILTER\_STRIDES = [2, 2, 2, 2]}: horizontal and vertical stride for the max-pooling on each layer;
+\item \texttt{FC1\_WEIGHTS\_DEPTH = 512}: depth of the first fully connected layer, connected to conv. layer of id \texttt{CONV\_LAYERS-1}. The second layer performs binary probability classification therefore has depth \texttt{NUM\_LABELS} (road; non-road);
+\end{itemize}
+  This allowed us to play with the quality of fitting based on user-provided filter sizes, depths and strides -- as detailed in the following paragraph.
+
+\paragraph{Final Network Architecture}
+
+In brief, our network is composed by a set of convolution layers (for extracting of convoluted features) and pooling layers (for the extraction of most meaningful weights from convolutional layer outputs), followed by two layers of fully connected layers (the universal function approximators). The input is a set of images to which patches are extracted. Those patches are then input individually or in batches to the network. The output contains the probability of the road or non-road classification. A sample of a possible network architecture with 2 convoluted layers and default parameters is displayed in figure \ref{fig-conv-2d-architecture}.
 
 \begin{figure*}
 \centering
@@ -111,73 +147,15 @@ A sample of a possible network architecture (for default parameters) is displaye
 \label{fig-conv-2d-architecture}
 \end{figure*}
 
-\section{Results}
+\section{Performance Analysis and Results}
 
-\begin{table}
-\begin{scriptsize}
-\begin{center}
+Riccardo bla bla bla
 
-\begin{tabular}{ l r r c l r r }
-\hline
-\textbf{Dim.} & \textbf{Eigen} & \textbf{Explained} & \hspace{0.1cm} & \textbf{Dim.} & \textbf{Eigen} & \textbf{Explained} \\
-    &  \textbf{value} & \textbf{var. ratio} & & & \textbf{value} & \textbf{var. ratio} \\
-\hline
-\textbf{0} & 1983617.8 & 7.43 e-1 & & \textbf{15} & 3.98 & 1.49 e-6\\
-\textbf{1} & 470787.3 & 1.76 e-1  & & \textbf{16} & 3.49 & 1.31 e-6\\
-\textbf{2} & 152814.2 & 5.72 e-2  & & \textbf{17} & 2.74 & 1.02 e-6\\
-\textbf{3} & 35127.6 & 1.31 e-2   & & \textbf{18} & 2.45 & 9.18 e-7\\
-\textbf{4} & 18184.4 & 6.81 e-3   & & \textbf{19} & 1.65 & 6.19 e-7\\
-\textbf{5} & 2235.3 & 8.37 e-4    & & \textbf{20} & 1.40 & 5.27 e-7\\
-\textbf{6} & 1833.1 & 6.86 e-4    & & \textbf{21} & 0.99 & 3.73 e-7\\
-\textbf{7} & 1266.6 & 4.74 e-4    & & \textbf{22} & 0.74 & 2.79 e-7\\
-\textbf{8} & 944.0 & 3.53 e-4     & & \textbf{23} & 0.67 & 2.54 e-7\\
-\textbf{9} & 519.3 & 1.94 e-4     & & \textbf{24} & 0.61 & 2.30 e-7\\
-\textbf{11} & 384.3 & 1.44 e-4    & & \textbf{25} & 0.18 & 6.99 e-8\\
-\textbf{10} & 374.8 & 1.40 e-4    & & \textbf{26} & 0.11 & 4.30 e-8\\
-\textbf{12} & 178.7 & 6.69 e-5    & & \textbf{27} & 0.05 & 2.17 e-8\\
-\textbf{13} & 138.8 & 5.20 e-5    & & \textbf{28} & 0.024 & 9.21 e-9\\
-\textbf{14} & 45.78 & 1.71 e-5    & & \textbf{29} & 7.48e-8 & 2.80 e-14\\
-\hline
-\end{tabular}
-\label{table-pca}
-\end{center}
-\end{scriptsize}
-\caption{\small Details on the eigen-vectors after PCA filtering. Features are sorted by relevance (explained variance ratio).}
-\label{table-pca}
-\end{table}
+\section{Final Remarks and Conclusion}
+\label{sec-Conclusion}
 
-\paragraph{6. Data Standardization} The final process performs data standardization by subtracting the mean and dividing the values by the standard deviation. This algorithm is particularly helpful to avoid computational overflows. It is only required when PCA is not executed beforehand, as the PCA implicitly executes the standardization.
+bla bla bla 
 
-\section{Machine Learning Methods}
-\label{sec-ML}
-
-We implemented the following three least squares methods: \texttt{least\_squares}, \texttt{least\_squares\_GD} and \texttt{least\_squares\_SGD} for least squares with normal equations, regular and stochastic gradient descent. We also implemented \texttt{ridge\_regression} for ridge regression using normal equations, \texttt{reg\_logistic\_regression} for regularized logistic regression using GD and SGD and \texttt{logistic\_regression} for logistic regression with GD and SGD.
-
-Our ideal solution relies on a combination of techniques. To obtain the best results we focus on \textbf{logistic regression}, the only binary classifier, as it provided better results than the available alternative methods. The final pre-filtering consisted of \textbf{mean amputation} over all features and standardization. After that we added a \textbf{polynomial interpolation of the fourth degree} that provided better result compared to the linear counterpart (see accuracy results for different degrees in Table 2). 
-
-\begin{table}
-\begin{tabular}{ l l l l | }
-Degree & Accuracy (\%) \\
-3 & 60 \\
-4 & 87 \\
-5 & 84 \\
-8 & 79 \\
-\end{tabular}
-\caption{\small Accuracy of predictions on the test data for different degrees of polynomials}
-\end{table}
-
-Due to the high amount of computation required, we use logistic regression with \textbf{stochastic gradient descent}.The step size gamma used for gradient descent was found with a binary search across a scope of parameters that yield low time to solution and low loss and set to $1.1e-03$. Finally, we tried to find a better solution using regularized logistic regression and 4-fold cross-validation for obtaining the best lambda. But since the difference between the error in the training data and the error in the test data was negligibly small (see Figure \ref{fig:cross-validation}) we did not pursue the regularized logistic regression further.
-
-\begin{figure}
-\centering
-%\includegraphics[width=0.47\textwidth]{images/cross_validation.png}
-\caption{\small Cross-validation results for test vs training data.}
-\label{fig:cross-validation}
-\end{figure}
-
-\section{Discussion and Summary}
-\label{sec-results}
-We applied machine learning techniques to data collected from the CERN particle accelerator aiming at recreating the process of discovering the Higgs particle. We detailed the challenges with the collected data --- many missing values and high dimensionality --- and presented an exploration of pre-filtering and transformation methods for reducing complexity (least significant dimensions) and sample size (outliers), and auto-completion of missing information (mean imputation). We presented the rationale behind an accurate classification based on a combination of algorithms. Our final algorithm can be executed by running \texttt{run.py}. It uses logistic regression with stochastic gradient descent. We cleaned and standardized the data and enriched it by creating a polynomial function of degree 4. This algorithm gave us the following score on Kaggle: $0.81192$ .
 
 %references
 \bibliographystyle{unsrt}
