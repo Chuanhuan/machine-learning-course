@@ -36,16 +36,16 @@
 %----------------------------------------------------------------------------------------
 %	ARTICLE INFORMATION
 %----------------------------------------------------------------------------------------
-\JournalInfo{Mini-project 1 - CS-433 - Pattern Classification and Machine Learning} % Journal information
+\JournalInfo{Project 2 - CS-433 - Road Classification with 2D Convolutional Neural Networks} % Journal information
 \Archive{\today} % Additional notes (e.g. copyright, DOI, review/research article)
 
 %%%%% dumb test
 \usepackage[english]{babel}
 \usepackage{blindtext}
 
-\PaperTitle{The Higgs boson machine learning challenge} % Article title
+\PaperTitle{Road Classification with 2D Conv. Neural Networks} % Article title
 
-\Authors{Bruno Magalhaes\textsuperscript{1}, Riccardo Silini{2}} % Authors
+\Authors{Bruno Magalhaes\textsuperscript{1}, Riccardo Silini{2} \hspace{7cm} team: deep mess} % Authors
 \affiliation{\textbf{Email (SCIPER):} \hspace{0.2cm} \textsuperscript{1} bruno.magalhaes@epfl.ch (212079) \hspace{0.2cm} \textsuperscript{2} riccardo.silini@epfl.ch (214398) \hspace{0.2cm}}
 
 \Keywords{}
@@ -63,7 +63,11 @@
 %---------- ABSTRACT
 
 \Abstract{ \small
-bla bla bla
+
+Road classification from aerial pictures allow for automatic reconstruction of maps, better guidance of autonomous vehicles, among others. Manual classification is infeasible due to the large amount ot that. Automatic classification can be pursued with Machine Learning techniques.
+
+We present an algorithm for 
+
 }
 
 \begin{document}
@@ -90,7 +94,7 @@ bla bla bla
 \caption{\small The collection of patches by stepping \texttt{IMG\_PATCH\_SIZE} (default, left) compared with \texttt{IMG\_PATCH\_SIZE/2} (\texttt{ADD\_INTERCALATED\_PATCHES} activated, right). When traversing image, next collected patch on the horizontal (vertical) direction is displayed as red (green).}
 \end{figure}
 
-\section{Features}
+\section{Architecture}
 
 \paragraph{Two-step classification} 
 
@@ -135,6 +139,14 @@ We allow the sub-network of convolution layers to increase or decrease, accordin
 \item \texttt{FC1\_WEIGHTS\_DEPTH = 512}: depth of the first fully connected layer, connected to conv. layer of id \texttt{CONV\_LAYERS-1}. The second layer performs binary probability classification therefore has depth \texttt{NUM\_LABELS} (road; non-road);
 \end{itemize}
   This allowed us to play with the quality of fitting based on user-provided filter sizes, depths and strides -- as detailed in the following paragraph.
+
+\paragraph{Save-State}
+
+The model training is stored automatically at every set of \texttt{RECORDING\_STEPS} steps. A model can be restored by setting the flag \texttt{RESTORE\_MODEL} to \texttt{True}
+
+\paragraph{Multi-Thread processing}
+
+Multi-core processing by setting \texttt{NUM\_THREADS} to the respective value of maximum concurrent threads in the processor's architecture. SEED, BATCH\_SIZE %"/model_phase_"+str(phase)+".ckpt"
 
 \paragraph{Final Network Architecture}
 
