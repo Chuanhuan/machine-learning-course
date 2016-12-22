@@ -30,7 +30,7 @@ def create_extra_input():
             img_id = config.EXTRA_IMAGE_IDS[i]
             img_filename = get_path_for_input(1,True,img_id)
             if i == 1:
-                print("--", img_filename)
+                print("   ", img_filename)
             gt_filename = config.GROUNDTRUTH_PATH + "satImage_" + ("%.3d" % img_id) + ".png"
             if os.path.isfile(img_filename):
                 im = Image.open(img_filename)
@@ -106,7 +106,7 @@ def extract_data(num_images, phase, train):
     for i in range(1, num_images+1):
         image_filename = get_path_for_input(phase,train,i)
         if i == 1:
-            print("--", image_filename)
+            print("   ", image_filename)
         if os.path.isfile(image_filename):
             #print ('Loading ' + image_filename)
             img = mpimg.imread(image_filename)
@@ -124,12 +124,12 @@ def extract_data(num_images, phase, train):
         
 # Assign a label to a patch v
 def value_to_class(v):
-    foreground_threshold = config.FOREGROUND_THRESHOULD # percentage of pixels > 1 required to assign a foreground label to a patch
+    foreground_threshold = config.FOREGROUND_THRESHOULD 
     df = numpy.sum(v)
     if df > foreground_threshold:
-        return [0, 1]
+        return [0, 1] #non-road (black) ?
     else:
-        return [1, 0]
+        return [1, 0] #road (white) ?
 
 # Extract label images
 def extract_labels(num_images):
@@ -138,7 +138,7 @@ def extract_labels(num_images):
     for i in range(1, num_images+1):
         gt_filename = config.GROUNDTRUTH_PATH + "satImage_" + ("%.3d" % i) + ".png"
         if i == 1:
-            print("--", gt_filename)
+            print("   ", gt_filename)
         if os.path.isfile(gt_filename):
             #print ('Loading ' + image_filename)
             img = mpimg.imread(gt_filename)
@@ -185,10 +185,10 @@ def label_to_img(imgwidth, imgheight, w, h, labels):
     idx = 0
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):
-            if labels[idx][0] > 0.5:
-                l = 1
+            if labels[idx][1] > 0.5:
+                l = 1 #black:  non-road
             else:
-                l = 0
+                l = 0 #white: non-road
             array_labels[j:j+w, i:i+h] = l
             idx = idx + 1
     return array_labels

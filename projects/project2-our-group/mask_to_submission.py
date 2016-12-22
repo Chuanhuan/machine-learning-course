@@ -16,9 +16,8 @@ def patch_to_label(patch):
     else:
         return 0
 
-def mask_to_submission_strings(image_filename):
+def mask_to_submission_strings(img_number, image_filename):
     """Reads a single image and outputs the strings that should go into the submission file"""
-    img_number = int(re.search(r"\d+", image_filename).group(0))
     im = mpimg.imread(image_filename)
     patch_size =  config.IMG_PATCH_SIZE
     for j in range(0, im.shape[1], patch_size):
@@ -32,12 +31,13 @@ def masks_to_submission(submission_filename, *image_filenames):
     """Converts images into a submission file"""
     with open(submission_filename, 'w') as f:
         f.write('id,prediction\n')
-        for fn in image_filenames[0:]:
-            f.writelines('{}\n'.format(s) for s in mask_to_submission_strings(fn))
+        for i in range(1, config.INPUT_SIZE+1):
+            f.writelines('{}\n'.format(s) for s in mask_to_submission_strings(i, image_filenames[i-1]))
 
 def generate_submission_csv_file(train=False, phase = 2):
     submission_filename = config.SUBMISSION_FILE_PATH
     image_filenames = []
+    print (phase, ": Generating submission.csv for",config.INPUT_SIZE,"images...")
     for i in range(1, config.INPUT_SIZE+1):
         if train == True:
             if phase == 1:
@@ -49,6 +49,7 @@ def generate_submission_csv_file(train=False, phase = 2):
                 image_filename = config.PREDICTIONS_PATH + "prediction_raw_test_" + str(i) + ".png"
             else:
                 image_filename = config.PREDICTIONS_PATH + "prediction_2_test_" + str(i) + ".png"
-        print ("Classifying",image_filename)
         image_filenames.append(image_filename)
     masks_to_submission(submission_filename, *image_filenames)
+
+

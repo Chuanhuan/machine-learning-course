@@ -1,14 +1,14 @@
 import config
-import mask_to_submission
+from mask_to_submission import *
 from CNN import *
 
 #To be run only once, generates a new 
 if config.DATA_AUGMENTATION == True:
     print("Data Augmentation running...")
     config.INPUT_SIZE = create_extra_input()
-    print("-- data augmentation done: added", len(config.EXTRA_IMAGE_IDS),"x3 new images, training size=",config.INPUT_SIZE," --")
+    print("0 : data augmentation done: added", len(config.EXTRA_IMAGE_IDS),"x3 new images, training size=",config.INPUT_SIZE," --")
 else:
-    print("-- data augmentation disabled, training size=",config.INPUT_SIZE,"--")
+    print("0 : data augmentation disabled, training size=",config.INPUT_SIZE,"--")
 
 cnn = CNN()
 
@@ -69,12 +69,11 @@ cnn.run(phase=2, train=True, conv_layers=config.CONV_LAYERS)
 ## Execute testing
 # config.IMG_PATCH_SIZE = 8 #has to match traning?
 config.RESTORE_MODEL=True
-config.INPUT_SIZE=50 #Test data set size
+config.INPUT_SIZE=5 #Test data set size
 
-#cnn.run(phase=1, train=False)
+cnn.run(phase=1, train=False)
 cnn.run(phase=2, train=False)
 
 ## generate submission CSV
 ## (specify if we use train or test [default] dataset, and output of phase 1 or 2 [default]3)
-#mask_to_submission.generate_submission_csv_file(train=True, phase=2)
-mask_to_submission.generate_submission_csv_file(train=False, phase=2)
+generate_submission_csv_file(train=False, phase=2)

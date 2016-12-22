@@ -45,7 +45,7 @@
 
 \PaperTitle{Road Classification with 2D Conv. Neural Networks} % Article title
 
-\Authors{Bruno Magalhaes\textsuperscript{1}, Riccardo Silini{2} \hspace{7cm} team: deep mess} % Authors
+\Authors{Bruno Magalhaes\textsuperscript{1}, Riccardo Silini\textsuperscript{2} \hspace{7.7cm} team: OhWell} % Authors
 \affiliation{\textbf{Email (SCIPER):} \hspace{0.2cm} \textsuperscript{1} bruno.magalhaes@epfl.ch (212079) \hspace{0.2cm} \textsuperscript{2} riccardo.silini@epfl.ch (214398) \hspace{0.2cm}}
 
 \Keywords{}
@@ -64,10 +64,7 @@
 
 \Abstract{ \small
 
-Road classification from aerial pictures allow for automatic reconstruction of maps, better guidance of autonomous vehicles, among others. Manual classification is infeasible due to the large amount ot that. Automatic classification can be pursued with Machine Learning techniques.
-
-We present an algorithm for 
-
+Road classification from orthogonal aerial photographies allows for automatic reconstruction of maps, guidance of autonomous vehicles, among others. Manual classification is infeasible due to the large amount of information and work involved. Automatic classification can be pursued with Machine Learning techniques. With that in mind, we present an algorithm for the automatic labelling of roads from sets of pictures using a 2D convolutional neural network. For added accuracy, we improve the provided sample code with data augmentation and dropout techniques and a 2-step neural network processing that learns from predictions of road labels.
 }
 
 \begin{document}
@@ -80,9 +77,22 @@ We present an algorithm for
 
 \section{Introduction}
 
+Our classificator was implemented on a 2D convolutional neural network, built with the TensorFlow API. Our network is based on several (user-definable) layers of convolution followed by two layers of fully connected nodes. The input is described by a square patch of RGB pixels. The output is the probability of a given input being classified as road and non-road.
+Previous attempts of classification based on Logistic Regression failed short due to not allowing for enough depth of the network to universally approximate the problem --- in practice being as performant as a fully-connected single-layer neural network. Nevertheless, its philosophy of including neighbour patches on the classification of a central patch was implemented in our model.
+
+The parameters of the execution and the Stochastic Gradient Descent algorithm are detailed in sub-section \ref{sec-execution-parameters}. For higher precision, we increased the input size with two data augmentation techniques, generating new image patches from pre-existing rotated patches, and from interleaved intervals of existing patches, as detailed in Section \ref{sec-data-augmentation}. We evaluated our results on a Macbook Air 13.3" 2015 and collected the feedback form the Kaggle system page, as presented in the results section (\ref{sec-results}). Section \ref{sec-conclusion} draws final conclusions.
+
+\paragraph{Execution Parameters}
+\label{sec-execution-parameters}
+
+The gradient descent algorithm parameters are the following: \texttt{LEARNING\_RATE} specifies the step size on the gradient descent update, with a decay given by \texttt{DECAY\_RATE}; the iterations count is defined in \texttt{NUM\_EPOCHS}; the value set by the variable \texttt{BATCH\_SIZE} specifies how many input elements to be used on the weights update, in practice allowing one to run Stochastic Gradient Descent by inputing a single element, a batch of elements, or all input data; \texttt{INPUT\_SIZE} sets the number of images used for training.
+
+For labelling, \texttt{FOREGROUND\_THRESHOULD} defines the threshold of the mean gradient on a given patch to be considered as non-road;
+
+Multi-core processing is possible by setting \texttt{NUM\_THREADS} to the respective value of maximum concurrent threads in the processor's architecture. \texttt{SEED} allows one to reproduce results by setting the random seed to the given value. The model training is stored automatically at every set of \texttt{RECORDING\_STEPS} steps. A model can be restored by setting the flag \texttt{RESTORE\_MODEL} to \texttt{True}.
 
 \section{Data Augmentation}
-\label{sec-pre-proc}
+\label{sec-data-augmentation}
 
 \paragraph{1. Rotation of input images with non-orthogonal roads} We increased the number of input images from $100$ to $148$ by rotating $90 \deg$, $180 \deg$ and $270 \deg$ the (16) training images that are not composed only of non-horizontal and non-vertical roads. This feature is activated by the flag \texttt{DATA\_AUGMENTATION}.
 
@@ -96,6 +106,28 @@ We present an algorithm for
 
 \section{Architecture}
 
+Our network is composed by a set of convolution layers (for extracting of convoluted features) and pooling layers (for the extraction of most meaningful weights from convolutional layer outputs), followed by two layers of fully connected layers (the universal function approximators). The input is a set of images to which patches are extracted. Those patches are then input individually or in batches to the network. The output contains the probability of the road or non-road classification. A sample of a possible network architecture with 2 convoluted layers and default parameters is displayed in figure \ref{fig-conv-2d-architecture}.
+
+\begin{figure*}
+\centering
+\includegraphics[width=0.9\textwidth]{figures/conv_2d_network.png}
+\caption{\small A general overview of the deep network architecture, with default parameters. Dimensionalities, padding types, depths and number of convolution+pooling layers are user-customisable.}
+\label{fig-conv-2d-architecture}
+\end{figure*}
+
+
+\paragraph{Multi-Layer convolutional network}
+
+We allow the sub-network of convolution layers to increase or decrease, according to the user-defined parameters \texttt{CONV\_LAYERS}. This allowed us to play with the quality of model fitting for different set set of parameters. In practice, our network is an array of convolution and pooling layers, where the output of one layer is the input of the following one. The parameters of every layer is fully customisable by the user from the following variables:
+\begin{itemize}
+\item \texttt{CONV\_LAYERS}: number of convolutional layers, and size of the following parameter arrays;
+\item \texttt{CONV\_FILTER\_SIZES = [5,5,5,5]} : For each layer, the count of horizontal and vertical pixels of filter;
+\item \texttt{CONV\_FILTER\_DEPTHS = [32, 64, 128, 256]}: depth of the weights for the aforementioned layers;
+\item \texttt{POOL\_FILTER\_STRIDES = [2, 2, 2, 2]}: horizontal and vertical stride for the max-pooling on each layer;
+\item \texttt{FC1\_WEIGHTS\_DEPTH = 512}: depth of the first fully connected layer, connected to conv. layer of id \texttt{CONV\_LAYERS-1}. The second layer performs binary probability classification therefore has depth \texttt{NUM\_LABELS} (road; non-road);
+\end{itemize}
+  This allowed us to play with the quality of fitting based on user-provided filter sizes, depths and strides -- as detailed in the following paragraph.
+ 
 \paragraph{Two-step classification} 
 
 To reduce noise and allows classification at a finer scale, we added a second neural network to the processing. The initial one will be trained with pairs of [images,groundtruth] and outputs the segmented classification. The second network is trained with pairs [classification,groundtruth] and received the first network's classification as input, outputting the final classification. The second step of this operation is presented as \texttt{Phase 2} in the source code. An example of an application of the two-step classification is displayed in the following picture.
@@ -128,43 +160,13 @@ Dropout is a regularization technique for reducing the overfitting of neural net
 \caption{\small Example of the dropout feature. Standard weights tunning (left) methods apply an update of all weights. Dropout-based networks (right) discards the updates of certain weights with the rationale of reducing overfitting. In the example, a dropout rate of \texttt{0.5} disables half of the nodes on the network.}
 \end{figure}
 
-\paragraph{Multi-Layer convolutional network}
-
-We allow the sub-network of convolution layers to increase or decrease, according to the user-defined parameters \texttt{CONV\_LAYERS}. This allowed us to play with the quality of model fitting for different set set of parameters. In practice, our network is an array of convolution and pooling layers, where the output of one layer is the input of the following one. The parameters of every layer is fully customisable by the user from the following variables:
-\begin{itemize}
-\item \texttt{CONV\_LAYERS}: number of convolutional layers, and size of the following parameter arrays;
-\item \texttt{CONV\_FILTER\_SIZES = [5,5,5,5]} : For each layer, the count of horizontal and vertical pixels of filter;
-\item \texttt{CONV\_FILTER\_DEPTHS = [32, 64, 128, 256]}: depth of the weights for the aforementioned layers;
-\item \texttt{POOL\_FILTER\_STRIDES = [2, 2, 2, 2]}: horizontal and vertical stride for the max-pooling on each layer;
-\item \texttt{FC1\_WEIGHTS\_DEPTH = 512}: depth of the first fully connected layer, connected to conv. layer of id \texttt{CONV\_LAYERS-1}. The second layer performs binary probability classification therefore has depth \texttt{NUM\_LABELS} (road; non-road);
-\end{itemize}
-  This allowed us to play with the quality of fitting based on user-provided filter sizes, depths and strides -- as detailed in the following paragraph.
-
-\paragraph{Save-State}
-
-The model training is stored automatically at every set of \texttt{RECORDING\_STEPS} steps. A model can be restored by setting the flag \texttt{RESTORE\_MODEL} to \texttt{True}
-
-\paragraph{Multi-Thread processing}
-
-Multi-core processing by setting \texttt{NUM\_THREADS} to the respective value of maximum concurrent threads in the processor's architecture. SEED, BATCH\_SIZE %"/model_phase_"+str(phase)+".ckpt"
-
-\paragraph{Final Network Architecture}
-
-In brief, our network is composed by a set of convolution layers (for extracting of convoluted features) and pooling layers (for the extraction of most meaningful weights from convolutional layer outputs), followed by two layers of fully connected layers (the universal function approximators). The input is a set of images to which patches are extracted. Those patches are then input individually or in batches to the network. The output contains the probability of the road or non-road classification. A sample of a possible network architecture with 2 convoluted layers and default parameters is displayed in figure \ref{fig-conv-2d-architecture}.
-
-\begin{figure*}
-\centering
-\includegraphics[width=0.9\textwidth]{figures/conv_2d_network.png}
-\caption{\small A general overview of the deep network architecture, with default parameters. Dimensionalities, padding types, depths and number of convolution+pooling layers are user-customisable.}
-\label{fig-conv-2d-architecture}
-\end{figure*}
-
 \section{Performance Analysis and Results}
+\label{sec-results}
 
 Riccardo bla bla bla
 
 \section{Final Remarks and Conclusion}
-\label{sec-Conclusion}
+\label{sec-conclusion}
 
 bla bla bla 
 

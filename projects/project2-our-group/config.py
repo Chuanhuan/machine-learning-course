@@ -49,9 +49,11 @@ global PREDICTIONS_PATH
 global INPUT_TRAIN_PATH
 global INPUT_TEST_PATH 
 global SUBMISSION_FILE_PATH
+global SUMMARY_MODEL_PATH
 
 PREDICTIONS_PATH = "./predictions/"
 GROUNDTRUTH_PATH = "./training/groundtruth/"
 INPUT_TRAIN_PATH = "./training/images/"
 INPUT_TEST_PATH  = "./test_set_images/" 
+SUMMARY_MODEL_PATH = "./tmp/"
 SUBMISSION_FILE_PATH = "./submission.csv"
