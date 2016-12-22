@@ -11,25 +11,38 @@ import numpy
 import tensorflow as tf
 import datetime
 
+def get_path_for_input(phase,train,i):
+    if phase ==1:
+        if train==True:  #path of input datatypes
+            return config.INPUT_TRAIN_PATH + "satImage_%.3d" % i + ".png"
+        else:
+            return config.INPUT_TEST_PATH + "test_" + str(i) + "/test_" + str(i) + ".png"
+    if phase == 2:
+        if train==True:
+            return config.PREDICTIONS_PATH + "prediction_raw_train_" + str(i) + ".png"
+        else:
+            return config.PREDICTIONS_PATH + "prediction_raw_test_" + str(i) + ".png"
+    return "unknown-phase-train-wrong-path"
+
 def create_extra_input():
         img_new_id = 100
-        img_preffix = "training/images/satImage_"
-        gt_preffix =  "training/groundtruth/satImage_"
         for i in range(0, len(config.EXTRA_IMAGE_IDS)):
             img_id = config.EXTRA_IMAGE_IDS[i]
-            img_filename = img_preffix + ("%.3d" % img_id) + ".png"
-            gt_filename  = gt_preffix  + ("%.3d" % img_id) + ".png"
+            img_filename = get_path_for_input(1,True,img_id)
+            if i == 1:
+                print("--", img_filename)
+            gt_filename = config.GROUNDTRUTH_PATH + "satImage_" + ("%.3d" % img_id) + ".png"
             if os.path.isfile(img_filename):
                 im = Image.open(img_filename)
                 gt = Image.open(gt_filename)
                 for r in range(1,4): #3 rotations
                     new_id = 100 + i*3 + r
-                    img_new_name = img_preffix + "%.3d" % new_id + ".png"
-                    gt_new_name =  gt_preffix + "%.3d" % new_id + ".png"
+                    img_new_name = config.INPUT_TRAIN_PATH + "satImage_" + ("%.3d" % new_id) + ".png"
+                    gt_new_name =  config.GROUNDTRUTH_PATH + "satImage_" + ("%.3d" % new_id) + ".png"
                     im.rotate(90*r).save(img_new_name)
                     gt.rotate(90*r).save(gt_new_name)
             else:
-                print ('Oops! File ' + image_filename + ' does not exist')
+                print ('Oops! File ' + img_filename + ' does not exist')
         return 100+len(config.EXTRA_IMAGE_IDS)*3 
 
 # Extract patches from a given image
@@ -85,16 +98,15 @@ def img_crop(im, w, h, add_intercalated_patches, add_neighboorhood):
     return list_patches
 
 #return matrix of image patches
-def extract_data(filename, num_images, phase):
+def extract_data(num_images, phase, train):
     """Extract the images into a 4D tensor [image index, y, x, channels].
     Values are rescaled from [0, 255] down to [-0.5, 0.5].
     """
     imgs = []
     for i in range(1, num_images+1):
-        if phase==1:
-            image_filename = filename + "satImage_%.3d" % i + ".png"
-        if phase==2:
-            image_filename = filename + "prediction_raw_train_" + str(i) + ".png"
+        image_filename = get_path_for_input(phase,train,i)
+        if i == 1:
+            print("--", image_filename)
         if os.path.isfile(image_filename):
             #print ('Loading ' + image_filename)
             img = mpimg.imread(image_filename)
@@ -120,17 +132,19 @@ def value_to_class(v):
         return [1, 0]
 
 # Extract label images
-def extract_labels(filename, num_images):
+def extract_labels(num_images):
     """Extract the labels into a 1-hot matrix [image index, label index]."""
     gt_imgs = []
     for i in range(1, num_images+1):
-        image_filename = filename + "satImage_%.3d" % i + ".png"
-        if os.path.isfile(image_filename):
+        gt_filename = config.GROUNDTRUTH_PATH + "satImage_" + ("%.3d" % i) + ".png"
+        if i == 1:
+            print("--", gt_filename)
+        if os.path.isfile(gt_filename):
             #print ('Loading ' + image_filename)
-            img = mpimg.imread(image_filename)
+            img = mpimg.imread(gt_filename)
             gt_imgs.append(img)
         else:
-            print ('File ' + image_filename + ' does not exist')
+            print ('File ' + gt_filename + ' does not exist')
 
     num_images = len(gt_imgs)
     gt_patches = [img_crop(gt_imgs[i], config.IMG_PATCH_SIZE, config.IMG_PATCH_SIZE, config.ADD_INTERCALATED_PATCHES, False) for i in range(num_images)]

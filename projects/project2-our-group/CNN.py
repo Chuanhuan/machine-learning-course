@@ -4,6 +4,7 @@ from helpers import *
 
 ### set Tensorflow settings
 
+#tf.app.flags.DEFINE_string('train_dir', '/Users/bmagalha/Workspace/ML_course/projects/project2-our-group/tmp/', "Directory where to write event logs and checkpoint.")
 tf.app.flags.DEFINE_string('train_dir', './tmp/', "Directory where to write event logs and checkpoint.")
 FLAGS = tf.app.flags.FLAGS
 
@@ -52,27 +53,22 @@ class CNN:
                 return img_prediction
 
             # Get a concatenation of the prediction and groundtruth for given input file
-            def get_prediction_with_groundtruth(filename, image_idx,phase,conv_layers):
-                if phase ==1:
-                    image_filename = filename + "satImage_%.3d" % image_idx + ".png"
-                if phase == 2:
-                    image_filename = filename + "prediction_raw_train_" + str(image_idx) + ".png" 
+            def get_prediction_with_groundtruth(image_idx,phase,conv_layers):
+                image_filename = get_path_for_input(phase, True,image_idx)
+                if image_idx == 1:
+                    print("--", image_filename)
                 img = mpimg.imread(image_filename)
                 img_prediction = get_prediction(img,phase,conv_layers)
                 return concatenate_images(img, img_prediction)
                 
             # Get prediction overlaid on the original image for given input file
-            def get_prediction_with_overlay(filename, image_idx,phase,conv_layers):
-                if phase ==1:
-                    image_filename = filename + "satImage_%.3d" % image_idx + ".png"
-                if phase == 2:
-                    image_filename = filename + "prediction_raw_train_" + str(image_idx) + ".png"
-                    #image_filename = filename + "satImage_%.3d" % image_idx + ".png" 
+            def get_prediction_with_overlay(image_idx,phase,conv_layers):
+                image_filename = get_path_for_input(phase, True,image_idx)
+                if image_idx == 1:
+                    print("--", image_filename)
                 img = mpimg.imread(image_filename)
-
                 img_prediction = get_prediction(img,phase, conv_layers)
                 oimg = make_img_overlay(img, img_prediction)
-
                 return oimg
 
             # We will replicate the model structure for the training subgraph, as well
@@ -201,18 +197,10 @@ class CNN:
             fc2_biases = tf.Variable(tf.constant(0.1, shape=[config.NUM_LABELS]))
 
             print(phase, ": extract_data...")
-            if phase == 1:
-                train_data_filename = 'training/images/'
-                train_data = extract_data(train_data_filename, config.INPUT_SIZE,phase)
+            train_data = extract_data(config.INPUT_SIZE,phase,train)
 
-            if phase == 2:
-                train_data_filename = "predictions/"
-                train_data = extract_data(train_data_filename, config.INPUT_SIZE,phase)
-
-            # Extract labels into numpy arrays.
             print(phase, ": extract_labels...")
-            train_labels_filename = 'training/groundtruth/' 
-            train_labels = extract_labels(train_labels_filename, config.INPUT_SIZE)
+            train_labels = extract_labels(config.INPUT_SIZE)
 
             num_epochs = config.NUM_EPOCHS #iterations count
 
@@ -341,13 +329,11 @@ class CNN:
 
                 if RESTORE_MODEL:
                     print (str(phase),': Loading existing network model...')
-                    # Restore variables from disk.
-                    saver.restore(s, FLAGS.train_dir + "/model_phase_"+str(phase)+".ckpt")
+                    saver.restore(s, FLAGS.train_dir + "model_phase_"+str(phase)+".ckpt")
                     print("Model restored.")
 
                 else:
                     # Run all the initializers to prepare the trainable parameters.
-                    #tf.initialize_all_variables().run()
                     tf.global_variables_initializer().run()
 
                     # Build the summary operation based on the TF collection of Summaries.
@@ -356,7 +342,7 @@ class CNN:
                                                             graph=s.graph)
                                                             #graph_def=s.graph_def)
                     # Loop through training steps.
-                    print (str(phase),': Initialized: total number of iterations = ' + str(int(num_epochs * train_size / config.BATCH_SIZE)))
+                    print (str(phase),': Initializing training, total number of iterations = ' + str(int(num_epochs * train_size / config.BATCH_SIZE)))
 
                     training_indices = range(train_size)
 
@@ -399,30 +385,24 @@ class CNN:
                                     feed_dict=feed_dict)
 
                         # Save the variables to disk.
-                        save_path = saver.save(s, FLAGS.train_dir + "/model_phase_"+str(phase)+".ckpt")
+                        save_path = saver.save(s, FLAGS.train_dir + "model_phase_"+str(phase)+".ckpt")
                         print("Model saved in file: %s" % save_path)
 
-
-                print ("Running prediction on training set, outputing", config.INPUT_SIZE,"files")
+                if train == True:
+                    print ("Running prediction on training set, from", config.INPUT_SIZE,"files")
+                else: 
+                    print ("Running prediction on test set, classifying", config.INPUT_SIZE,"files")
                 prediction_dir = config.PREDICTIONS_PATH
 
                 if not os.path.isdir(prediction_dir):
                     os.mkdir(prediction_dir)
 
                 for i in range(1, config.INPUT_SIZE+1):
-                    if phase ==1:
-                        if train==True:
-                            image_filename = config.INPUT_TRAIN_PATH + "satImage_%.3d" % i + ".png"
-                        else:
-                            image_filename = config.INPUT_TEST_PATH + "test_" + str(i) + "/test_" + str(i) + ".png"
-                    if phase == 2:
-                        if train==True:
-                            image_filename = config.PREDICTIONS_PATH + "prediction_raw_train_" + str(i) + ".png" 
-                        else:
-                            image_filename = config.PREDICTIONS_PATH + "prediction_raw_test_" + str(i) + ".png" 
-
+                    image_filename = get_path_for_input(phase,train,i)
+                    if i == 1:
+                        print("--", image_filename)
                     rimg = mpimg.imread(image_filename)
-                    rimg_prediction = get_prediction(rimg,phase, conv_layers)
+                    rimg_prediction = get_prediction(rimg, phase, conv_layers)
                     #convert from 2D array 1/0 to RGB
                     w = rimg_prediction.shape[0]
                     h = rimg_prediction.shape[1]
@@ -433,8 +413,8 @@ class CNN:
                     rimg_final = Image.fromarray(rimg_mask, 'RGB')    
                     
                     if train==True:
-                        pimg = get_prediction_with_groundtruth(train_data_filename,i,phase,conv_layers)
-                        oimg = get_prediction_with_overlay(train_data_filename,i,phase,conv_layers)
+                        pimg = get_prediction_with_groundtruth(i,phase,conv_layers)
+                        oimg = get_prediction_with_overlay(i,phase,conv_layers)
                     
                     if phase == 1:
                         if train==True:

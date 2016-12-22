@@ -11,17 +11,19 @@ global SEED
 global BATCH_SIZE
 global RECORDING_STEP
 global NUM_THREADS
+global DATA_AUGMENTATION
 global EXTRA_IMAGE_IDS
 global FOREGROUND_THRESHOULD
 
 NUM_CHANNELS = 3 # RGB images
 PIXEL_DEPTH = 255
 NUM_LABELS = 2
-INPUT_SIZE = 50 # 100 + 48 augmented
+INPUT_SIZE = 32 # 100 + 48 augmented
 SEED = 66478  # Set to None for random seed.
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 RECORDING_STEP = 1000
 NUM_THREADS = 2
+DATA_AUGMENTATION = False
 EXTRA_IMAGE_IDS = [23,26,27,28,30,32,33,38,42,69,72,73,75,83,88,91]
 FOREGROUND_THRESHOULD = 0.25
 
@@ -49,6 +51,7 @@ global INPUT_TEST_PATH
 global SUBMISSION_FILE_PATH
 
 PREDICTIONS_PATH = "./predictions/"
+GROUNDTRUTH_PATH = "./training/groundtruth/"
 INPUT_TRAIN_PATH = "./training/images/"
 INPUT_TEST_PATH  = "./test_set_images/" 
 SUBMISSION_FILE_PATH = "./submission.csv"
